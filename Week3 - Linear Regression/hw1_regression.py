@@ -3,7 +3,7 @@ import sys
 
 
 ## Solution for Part 1
-def part1(lambda_input, sigma2_input, X_train, y_train):
+def part1(lambda_input, X_train, y_train):
     ## Input : Arguments to the function
     ## Return : wRR, Final list of values to write in the file
     """
@@ -17,7 +17,7 @@ def part1(lambda_input, sigma2_input, X_train, y_train):
     """
     dimensions = X_train.shape[1]
     # Finding (λI + X T X)
-    expression = lambda_input * np.eye(dimensions) + (X_train.T).dot(y_train)
+    expression = lambda_input * np.eye(dimensions) + (X_train.T).dot(X_train)
     # Calculating wRR by inversing above expression and multiplying to X(T) and y
     final_wRR = (np.linalg.inv(expression)).dot((X_train.T).dot(y_train))
     return final_wRR
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     X_test = np.genfromtxt(sys.argv[5], delimiter=",")
 
     # Compute wRR from the first part
-    wRR = part1(lambda_input, sigma2_input, X_train, y_train)
+    wRR = part1(lambda_input, X_train, y_train)
     np.savetxt("wRR_" + str(lambda_input) + ".csv", wRR, delimiter="\n")  # write output to file
 
     # Compute sequence for Active Learning from the second part
