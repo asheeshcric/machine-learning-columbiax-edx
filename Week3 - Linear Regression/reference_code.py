@@ -99,8 +99,8 @@ def main():
     #    print(active)
 
     # Write output to file
-    path1 = "wRR_{:g}.csv".format(lambdaNum)
-    path2 = "active_{:g}_{:g}.csv".format(lambdaNum, varNum)
+    path1 = "wRR_{:g}_refernce.csv".format(lambdaNum)
+    path2 = "active_{:g}_{:g}_reference.csv".format(lambdaNum, varNum)
     with open(path1, "w") as file:
         writer = csv.writer(file, delimiter=',', lineterminator='\n')
         for val in wRR:
