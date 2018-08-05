@@ -28,13 +28,13 @@ def update_posterior_distribution(lambda_input, sigma2_input, X_train, dimension
     auto_correlation = (X_train.T).dot(X_train) + auto_correlation
     cross_correlation = (X_train.T).dot(y_test) + cross_correlation
 
-    covInv = lambda_input * np.eye(dimensions) + (1 / sigma2_input) * auto_correlation
-    cov = np.linalg.inv(covInv)
+    covariance_inverse = lambda_input * np.eye(dimensions) + (1 / sigma2_input) * auto_correlation
+    covariance = np.linalg.inv(covariance_inverse)
 
     temp1 = lambda_input * sigma2_input * np.eye(dimensions) + auto_correlation
     mean = (np.linalg.inv(temp1)).dot(cross_correlation)
 
-    return cov, mean, auto_correlation, cross_correlation
+    return covariance, mean, auto_correlation, cross_correlation
 
 
 ## Solution for Part 2
