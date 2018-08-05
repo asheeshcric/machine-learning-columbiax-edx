@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-
+import csv
 
 ## Solution for Part 1
 def part1(lambda_input, X_train, y_train):
@@ -47,7 +47,7 @@ def part2(lambda_input, sigma2_input, X_train, y_train, X_test):
     cross_correlation = np.zeros(dimensions)
     covariance, wRR, auto_correlation, cross_correlation = update_posterior_distribution(lambda_input, sigma2_input,
                                                                                          X_train,
-                                                                                         dimensions, X_test,
+                                                                                         dimensions, y_train,
                                                                                          auto_correlation,
                                                                                          cross_correlation)
     # Here wRR is directly taken as mean from Lecture 5, slide 19
@@ -55,8 +55,8 @@ def part2(lambda_input, sigma2_input, X_train, y_train, X_test):
     for i in range(10):
         variance_matrix = (X_test.dot(covariance)).dot(X_test.T)
         row = np.argmax(variance_matrix.diagonal())
-        X_data = X_test[row, :]
-        label = X_data.dot(wRR)  # From Lecture 5, slide 12
+        X_train = X_test[row, :]
+        y_train = X_train.dot(wRR)  # From Lecture 5, slide 12
         # Append active rows
         active.append(label_indices[row])
         X_test = np.delete(X_test, (row), axis=0)
@@ -64,12 +64,23 @@ def part2(lambda_input, sigma2_input, X_train, y_train, X_test):
 
         # Once again, update the posterior distribution
         covariance, wRR, auto_correlation, cross_correlation = update_posterior_distribution(lambda_input, sigma2_input,
-                                                                                             X_data,
-                                                                                             dimensions, X_test,
+                                                                                             X_train,
+                                                                                             dimensions, y_train,
                                                                                              auto_correlation,
                                                                                              cross_correlation)
 
-    return [row + 1 for row in active]
+    return [int(row + 1) for row in active]
+
+
+def write_to_files(lambda_input, sigma2_input, wRR, active):
+    with open("wRR_" + str(lambda_input) + ".csv", "w") as wRR_file:
+        csv_writer = csv.writer(wRR_file, delimiter=',', lineterminator='\n')
+        for value in wRR:
+            csv_writer.writerow([value])
+
+    with open("active_" + str(lambda_input) + "_" + str(int(sigma2_input)) + ".csv", "w") as active_file:
+        csv_writer = csv.writer(active_file, delimiter=",")
+        csv_writer.writerow(active)
 
 
 if __name__ == '__main__':
@@ -81,10 +92,12 @@ if __name__ == '__main__':
 
     # Compute wRR from the first part
     wRR = part1(lambda_input, X_train, y_train)
-    np.savetxt("wRR_" + str(lambda_input) + ".csv", wRR, delimiter="\n")  # write output to file
+    # np.savetxt("wRR_" + str(lambda_input) + ".csv", wRR, delimiter="\n")  # write output to file
 
     # Compute sequence for Active Learning from the second part
     active = part2(lambda_input, sigma2_input, X_train, y_train,
                    X_test.copy())  # Assuming active is returned from the function
-    np.savetxt("active_" + str(lambda_input) + "_" + str(int(sigma2_input)) + ".csv", active,
-               delimiter=",")  # write output to file
+    # np.savetxt("active_" + str(lambda_input) + "_" + str(int(sigma2_input)) + ".csv", active,
+    #            delimiter=",")  # write output to file
+
+    write_to_files(lambda_input, sigma2_input, wRR, active)
