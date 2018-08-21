@@ -2,10 +2,6 @@ from __future__ import division
 import numpy as np
 import sys
 
-lam = 2
-sigma2 = 0.1
-d = 5
-
 
 # Probabilistic Matrix Factorization
 def PMF(train_data):
