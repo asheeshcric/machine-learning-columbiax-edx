@@ -1,63 +1,64 @@
 import numpy as np
 import sys
+from scipy.stats import multivariate_normal
 
 
+# Expectation Maximization for Gaussian Mixture Model (EM GMM)
 def em_gmm(data, k_clusters):
-    max_iteration = 10
-    length = data.shape[0]
-    dimensions = data.shape[1]
+    max_iterations = 10
 
-    # Initialize Sigma with an identity matrix
-    sigma_k = np.eye(dimensions)
-    sigma = np.repeat(sigma_k[:, :, np.newaxis], k_clusters, axis=2)
+    n_rows = data.shape[0]
+    n_cols = data.shape[1]
 
-    # Initialize a Uniform Probability Distribution
-    pi_class = np.ones(k_clusters) * (1 / k_clusters)
-    phi = np.zeros((length, k_clusters))
-    phi_normalized = np.zeros((length, k_clusters))
+    # initializing the centroids/clusters
+    mu = data[np.random.choice(n_rows, k_clusters, replace=False), :]
 
-    # Initialize myu with random selection of data points
-    indices = np.random.randint(0, length, size=k_clusters)
-    myu = data[indices]
+    # covariance for each cluster
+    sigma = [np.eye(n_cols) for i in range(k_clusters)]
 
-    for iteration in range(max_iteration):
-        # Calculate expectation state of EM Algorithm
+    # pi - apriori uniform distribution
+    pi = np.ones(k_clusters) / k_clusters
+
+    # Initialize phi
+    phi = np.zeros((n_rows, k_clusters))
+    for iteration in range(max_iterations):
+        for i in range(n_rows):
+            # This is the normalizing constant (denominator) used while calculating phi(k)
+            norm_constant = np.sum(
+                [pi[k] * multivariate_normal.pdf(data[i], mean=mu[k], cov=sigma[k], allow_singular=True) for k in
+                 range(k_clusters)])
+            if norm_constant == 0:
+                phi[i] = pi / k_clusters
+            else:
+                phi[i] = [(pi[k] * multivariate_normal.pdf(data[i], mean=mu[k], cov=sigma[k],
+                                                           allow_singular=True)) / norm_constant for k in
+                          range(k_clusters)]
+
         for k in range(k_clusters):
-            inv_sigma_k = np.linalg.inv(sigma[:, :, k])
-            inv_sqr_sigma_k_det = (np.linalg.det(sigma[:, :, k])) ** -0.5
-            for index in range(length):
-                xi = data[index, :]
-                temp1 = (((xi - myu[k]).T).dot(inv_sigma_k)).dot(xi - myu[k])
-                phi[index, k] = pi_class[k] * ((2 * np.pi) ** (-dimensions / 2)) * inv_sqr_sigma_k_det * np.exp(-0.5 * temp1)
-            for index in range(length):
-                total = phi[index, :].sum()
-                phi_normalized[index, :] = phi[index, :] / float(total)
+            nk = np.sum(phi[:, k])
+            pi[k] = nk / n_rows
+            if nk == 0:
+                mu[k] = data[np.random.choice(n_rows, 1, replace=False), :]
+                sigma[k] = np.eye(n_cols)
+            else:
+                mu[k] = np.sum(data * phi[:, k].reshape(n_rows, 1), axis=0) / nk
+                cov_sum = np.zeros((n_cols, n_cols))
 
-        # Calculate maximization state of EM algorithm
-        n_k = np.sum(phi_normalized, axis=0)
-        pi_class = n_k / float(length)
-        for k in range(k_clusters):
-            myu[k] = ((phi_normalized[:, k].T).dot(data)) / n_k[k]
-        for k in range(k_clusters):
-            zc_matrix = np.zeros((dimensions, 1))
-            dim_sqr_matrix = np.zeros((dimensions, dimensions))
-            for index in range(length):
-                xi = data[index, :]
-                zc_matrix[:, 0] = xi - myu[k]
-                dim_sqr_matrix = dim_sqr_matrix + phi_normalized[index, k] * np.outer(zc_matrix, zc_matrix)
-            sigma[:, :, k] = dim_sqr_matrix / float(n_k[k])
+                for i in range(n_rows):
+                    centered_data = data[i] - mu[k]
+                    cov_sum += phi[i, k] * np.outer(centered_data, centered_data)
 
-        # Write outputs to files
+                sigma[k] = cov_sum / nk
 
         filename = "pi-" + str(iteration + 1) + ".csv"
-        np.savetxt(filename, pi_class, delimiter=",")
+        np.savetxt(filename, pi, delimiter=",")
         filename = "mu-" + str(iteration + 1) + ".csv"
-        np.savetxt(filename, myu, delimiter=",")  # this must be done at every
+        np.savetxt(filename, mu, delimiter=",")  # this must be done at every iteration
 
         for j in range(k_clusters):  # k is the number of clusters
-            # this must be done 5 times (or the number of clusters) for each iteration
-            filename = "Sigma-" + str(j + 1) + "-" + str(iteration + 1) + ".csv"
-            np.savetxt(filename, sigma[:, :, j], delimiter=",")
+            filename = "Sigma-" + str(j + 1) + "-" + str(
+                iteration + 1) + ".csv"  # this must be done 5 times (or the number of clusters) for each iteration
+            np.savetxt(filename, sigma[j], delimiter=",")
 
 
 def k_means(data, k_clusters):
