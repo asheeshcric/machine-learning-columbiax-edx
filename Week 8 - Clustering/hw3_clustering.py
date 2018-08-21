@@ -52,10 +52,17 @@ def em_gmm(data, k_clusters):
                 dim_sqr_matrix = dim_sqr_matrix + phi_normalized[index, k] * np.outer(zc_matrix, zc_matrix)
             sigma[:, :, k] = dim_sqr_matrix / float(nK[k])
 
-    # filename = "pi-" + str(i + 1) + ".csv"
-    # np.savetxt(filename, pi, delimiter=",")
-    # filename = "mu-" + str(i + 1) + ".csv"
-    # np.savetxt(filename, mu, delimiter=",")  # this must be done at every iteration
+        # Write outputs to files
+
+        filename = "pi-" + str(iteration + 1) + ".csv"
+        np.savetxt(filename, pi_class, delimiter=",")
+        filename = "mu-" + str(iteration + 1) + ".csv"
+        np.savetxt(filename, myu, delimiter=",")  # this must be done at every
+
+        for j in range(k_clusters):  # k is the number of clusters
+            # this must be done 5 times (or the number of clusters) for each iteration
+            filename = "Sigma-" + str(j + 1) + "-" + str(iteration + 1) + ".csv"
+            np.savetxt(filename, sigma[:, :, j], delimiter=",")
 
 
 def k_means(data, k_clusters):
@@ -91,7 +98,7 @@ def build_cluster():
     k_clusters = 5
 
     k_means(X, k_clusters)
-    # em_gmm(X, k_clusters)
+    em_gmm(X, k_clusters)
 
 
 if __name__ == '__main__':
