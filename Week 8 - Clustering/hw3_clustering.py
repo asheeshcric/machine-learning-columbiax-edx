@@ -6,49 +6,46 @@ def em_gmm(data, k_clusters):
     max_iteration = 10
     length = data.shape[0]
     dimensions = data.shape[1]
-    sigma_k = np.eye(dimensions)
 
-    # Initialize sigma with an identity matrix
+    # Initialize Sigma with an identity matrix
+    sigma_k = np.eye(dimensions)
     sigma = np.repeat(sigma_k[:, :, np.newaxis], k_clusters, axis=2)
 
-    # Initialize a uniform probability distribution
+    # Initialize a Uniform Probability Distribution
     pi_class = np.ones(k_clusters) * (1 / k_clusters)
     phi = np.zeros((length, k_clusters))
     phi_normalized = np.zeros((length, k_clusters))
 
-    # Initialize myu with random data points as in k_means
+    # Initialize myu with random selection of data points
     indices = np.random.randint(0, length, size=k_clusters)
     myu = data[indices]
 
     for iteration in range(max_iteration):
-        # Calculate Expectation state of EM Algorithm
+        # Calculate expectation state of EM Algorithm
         for k in range(k_clusters):
             inv_sigma_k = np.linalg.inv(sigma[:, :, k])
             inv_sqr_sigma_k_det = (np.linalg.det(sigma[:, :, k])) ** -0.5
             for index in range(length):
                 xi = data[index, :]
                 temp1 = (((xi - myu[k]).T).dot(inv_sigma_k)).dot(xi - myu[k])
-                phi[index, k] = pi_class[k] * ((2 * np.pi) ** (-dimensions / 2)) * inv_sqr_sigma_k_det * np.exp(
-                    -0.5 * temp1)
+                phi[index, k] = pi_class[k] * ((2 * np.pi) ** (-dimensions / 2)) * inv_sqr_sigma_k_det * np.exp(-0.5 * temp1)
             for index in range(length):
                 total = phi[index, :].sum()
                 phi_normalized[index, :] = phi[index, :] / float(total)
 
-        # compute maximization step of EM algorithm
-        nK = np.sum(phi_normalized, axis=0)
-        pi_class = nK / float(length)
+        # Calculate maximization state of EM algorithm
+        n_k = np.sum(phi_normalized, axis=0)
+        pi_class = n_k / float(length)
         for k in range(k_clusters):
-            myu[k] = ((phi_normalized[:, k].T).dot(data)) / nK[k]
+            myu[k] = ((phi_normalized[:, k].T).dot(data)) / n_k[k]
         for k in range(k_clusters):
-            # A column matrix containing zeros
             zc_matrix = np.zeros((dimensions, 1))
-            # A dim*dim matrix containing zeros
             dim_sqr_matrix = np.zeros((dimensions, dimensions))
             for index in range(length):
                 xi = data[index, :]
                 zc_matrix[:, 0] = xi - myu[k]
                 dim_sqr_matrix = dim_sqr_matrix + phi_normalized[index, k] * np.outer(zc_matrix, zc_matrix)
-            sigma[:, :, k] = dim_sqr_matrix / float(nK[k])
+            sigma[:, :, k] = dim_sqr_matrix / float(n_k[k])
 
         # Write outputs to files
 
