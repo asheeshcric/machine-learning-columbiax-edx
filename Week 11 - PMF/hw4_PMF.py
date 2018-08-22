@@ -75,7 +75,7 @@ def setup_pmf():
     # Assuming the PMF function returns Loss L, U_matrices and V_matrices (refer to lecture)
     L, U_matrices, V_matrices = PMF(train_data, lambda_parameter, variance, dimensions, max_iteration)
 
-    np.savetxt("Outputs/objective.csv", L, delimiter=",")
+    np.savetxt("objective.csv", L, delimiter=",")
 
     np.savetxt("U-10.csv", U_matrices[9], delimiter=",")
     np.savetxt("U-25.csv", U_matrices[24], delimiter=",")
