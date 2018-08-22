@@ -1,89 +1,81 @@
 from __future__ import division
-import numpy as np
 import sys
+import numpy as np
+import pandas as panduram
 
 
-# Probabilistic Matrix Factorization
-def PMF(train_data):
-    # Lecture 17, slide 19
-    dimensions, myu, variance, lambda_parameter, max_iteration = 5, 0, 0.1, 2, 50
-    L = np.zeros((max_iteration, 1))
+# Implement function here
+def PMF(train_data, lambda_parameter, variance, dimensions, max_iteration):
+    # Initialize L matrix
+    L = np.zeros(max_iteration)
 
-    # Get dimension of matrix M
-    n_u = int(np.amax(train_data[:, 0]))
-    n_v = int(np.amax(train_data[:, 1]))
+    # Initialize U_matrices
+    n_u = train_data.shape[0]
+    U_matrices = np.zeros((max_iteration, n_u, dimensions))
 
-    V_matrices = np.random.normal(myu, np.sqrt(1 / lambda_parameter), (n_v, dimensions))
-    U_matrices = np.zeros((n_u, dimensions))
+    # Initialize V_matrices
+    n_v = train_data.shape[1]
+    V_matrices = np.zeros((max_iteration, n_v, dimensions))
 
-    index_ui = []
-    for i in range(n_u):
-        mat1 = train_data[train_data[:, 0] == i + 1][:, 1]  # index set of objects rated by user i
-        mat2 = mat1.astype(np.int64)
-        index_ui.append(mat2)
-
-        # Forming V_matrices
-    index_vj = []
-    for j in range(n_v):
-        mat1 = train_data[train_data[:, 1] == j + 1][:, 0]  # index set of users who rated object j
-        mat2 = mat1.astype(int)
-        index_vj.append(mat2)
-
-    # Forming M_matrices
-    m_matrix = np.zeros((n_u, n_v))
-    for val in train_data:
-        row = int(val[0])
-        col = int(val[1])
-        m_matrix[row - 1, col - 1] = val[2]
+    # Initialize and calculate mean and covariance
+    myu = np.zeros(dimensions)
+    covariance = (1 / lambda_parameter) * np.identity(dimensions)
+    V_matrices[0] = np.random.multivariate_normal(myu, covariance, n_v)
 
     for iteration in range(max_iteration):
-        # Update U_matrices
+        length = 0 if iteration == 0 else iteration - 1
         for i in range(n_u):
-            mat1 = lambda_parameter * variance * np.eye(dimensions)
-            mat2 = V_matrices[index_ui[i] - 1]
-            mat3 = (mat2.T).dot(mat2)
-            mat4 = np.linalg.inv(mat1 + mat3)
+            matrix1 = lambda_parameter * variance * np.identity(dimensions)
+            matrix2 = np.zeros(dimensions)
+            for j in range(n_v):
+                if train_data[i, j] == True:
+                    matrix1 += np.outer(V_matrices[length, j], V_matrices[length, j])  # movie rated by the user
+                    matrix2 += train_data[i, j] * V_matrices[length, j]
 
-            mat5 = m_matrix[i, index_ui[i] - 1]
-            mat6 = (mat2 * mat5[:, None]).sum(axis=0)
+            U_matrices[iteration, i] = np.dot(np.linalg.inv(matrix1), matrix2)
 
-            ui = mat4.dot(mat6)
-            U_matrices[i] = ui
-
-        # Update V_matrices
         for j in range(n_v):
-            mat1 = lambda_parameter * variance * np.eye(dimensions)
-            mat2 = U_matrices[index_vj[j] - 1]
-            mat3 = (mat2.T).dot(mat2)
-            mat4 = np.linalg.inv(mat1 + mat3)
+            matrix1 = lambda_parameter * variance * np.identity(dimensions)
+            matrix2 = np.zeros(dimensions)
+            for i in range(n_u):
+                if train_data[i, j] == True:
+                    matrix1 += np.outer(U_matrices[iteration, i], U_matrices[iteration, i])
+                    matrix2 += train_data[i, j] * U_matrices[iteration, i]
 
-            mat5 = m_matrix[index_vj[j] - 1, j]
-            mat6 = (mat2 * mat5[:, None]).sum(axis=0)
+            V_matrices[iteration, j] = np.dot(np.linalg.inv(matrix1), matrix2)
 
-            vj = mat4.dot(mat6)
-            V_matrices[j] = vj
+        current_temp = 0
+        for i in range(n_u):
 
-        # Calculate MAP objective functions
-        map2 = lambda_parameter * 0.5 * (((np.linalg.norm(U_matrices, axis=1)) ** 2).sum())
-        map3 = lambda_parameter * 0.5 * (((np.linalg.norm(V_matrices, axis=1)) ** 2).sum())
-        map1 = 0
-        for val in train_data:
-            i = int(val[0])
-            j = int(val[1])
-            map1 = map1 + (val[2] - np.dot(U_matrices[i - 1, :], V_matrices[j - 1, :])) ** 2
-        map1 = map1 / (2 * variance)
-        L[iteration] = - map1 - map2 - map3
+            for j in range(n_v):
+
+                if train_data[i, j] == True:
+                    current_temp -= np.square(
+                        train_data[i, j] - np.dot(U_matrices[iteration, i].T, V_matrices[iteration, j]))
+
+        current_temp = (1 / (2 * variance)) * current_temp
+
+        current_temp -= (lambda_parameter / 2) * (
+                np.square(np.linalg.norm(U_matrices[iteration])) + np.square(np.linalg.norm(V_matrices[iteration])))
+
+        L[iteration] = current_temp
 
     return L, U_matrices, V_matrices
 
 
 def setup_pmf():
-    train_data = np.genfromtxt(sys.argv[1], delimiter=",")
+    data = panduram.read_csv(sys.argv[1])
+    data = data.pivot(index=data.columns[0], columns=data.columns[1],
+                      values=data.columns[2])
+    unused_variable = ~data.isnull().as_matrix()
+    train_data = data.as_matrix()
+
+    lambda_parameter, variance, dimensions, max_iteration = 2, 0.1, 5, 50
 
     # Assuming the PMF function returns Loss L, U_matrices and V_matrices (refer to lecture)
-    L, U_matrices, V_matrices = PMF(train_data)
+    L, U_matrices, V_matrices = PMF(train_data, lambda_parameter, variance, dimensions, max_iteration)
 
-    np.savetxt("objective.csv", L, delimiter=",")
+    np.savetxt("Outputs/objective.csv", L, delimiter=",")
 
     np.savetxt("U-10.csv", U_matrices[9], delimiter=",")
     np.savetxt("U-25.csv", U_matrices[24], delimiter=",")
